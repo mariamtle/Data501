@@ -1,0 +1,325 @@
+---
+title: "Part A EDA"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+  word_document: default
+---
+
+Modified the 305 startup files to use for now:
+
+```{r}
+library(binom)
+library(car)
+library(collapsibleTree)
+library(dbplyr)
+library(dplyr)
+library(EnvStats)
+library(ggformula)
+library(ggplot2)
+library(gmodels)
+library(htmltools)
+library(ISLR)
+library(knitr)
+library(lawstat)
+library(markdown)
+library(mosaic)
+library(mdsr)
+library(mosaicData)
+library(nycflights13)
+library(olsrr)
+library(plyr)
+library(purrr)
+library(plotly)
+library(resampledata)
+library(rmarkdown)
+library(rpart)
+library(rpart.plot)
+library(rvest)
+library(SDaA)
+library(shiny)
+library(stringi)
+library(tibble)
+library(tidyr)
+library(tidyselect)
+library(tinytex)
+library(yaml)
+library(shiny)
+library(lmtest)
+library(readxl)
+```
+
+# Basic Visual:
+Reading the deaths data
+```{r}
+deaths1x1df= read.csv("C:/Users/maria/Downloads/datacapstone/Deaths_1x1.csv")
+head(deaths1x1df)
+```
+
+Ensuring all data types are appropriate (included changing 110+ to 110 on excel file)
+
+```{r}
+deaths1x1 = deaths1x1df %>%
+  mutate(
+    Year = as.integer(Year),
+    Age = as.integer(Age),
+    Female = as.numeric(Female),
+    Male = as.numeric(Male),
+    Total = as.numeric(Total)
+  )
+```
+
+```{r}
+
+ggplot(deaths1x1, aes(x = Year, y = Total, group = Age, color = as.factor(Age))) +
+  geom_line(alpha = 0.3) +
+  labs(title = "Canadian Mortality From 1921-2022 
+       For Every Age", x = "Year", y = "Total Deaths") +
+  theme_minimal()
+
+```
+# Next up: Playing around with regression for each pandemic period
+
+```{r}
+# Loading the created dataset
+testmortalityyears=read_excel("C:/Users/maria/Downloads/datacapstone/narrowPandemicDeath&mortality.xlsx")
+
+# Ensuring column names have no extra spaces because it messed with the fucntion use
+colnames(testmortalityyears) = gsub(" ", "_", colnames(testmortalityyears))
+
+# Ensuring correct data types: Year and Mortality_Rate are numeric
+testmortalityyears$Year=as.numeric(testmortalityyears$Year)
+testmortalityyears$Mortality_Rate=as.numeric(testmortalityyears$Mortality_Rate)
+
+# Defining subsets we want to perform the lm test on (for each pandemic period)
+year_subsets = list(
+  c(1952,1953,1954,1955,1956,1957,1958,1959,1960,1961,1962),
+  c(1963,1964,1965,1966,1967,1968,1969,1970,1971,1972,1973),
+  c(2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014),
+  c(2015,2016,2017,2018,2019,2020,2021,2022)
+)
+
+# Performing regression and plot for each subset to study each pandemic's data (I used help here)
+for (subset in year_subsets) {
+  subset_data = filter(testmortalityyears, Year %in% subset)
+  
+  # Ensure subset is not empty
+  if (nrow(subset_data) > 0) {
+    model= lm(Mortality_Rate ~ Year, data = subset_data)
+    print(summary(model))
+
+    # Plot
+    plot = ggplot(subset_data, aes(x = Year, y = Mortality_Rate)) +
+      geom_point(color = "blue") +
+      geom_smooth(method = "lm", color = "red", se = TRUE) +
+      ggtitle(paste("Mortality Rate vs. Year (", min(subset), "-", max(subset), ")")) +
+      xlab("Year") +
+      ylab("Mortality Rate") +
+      theme_minimal()
+
+    print(plot)
+  } else {
+    print(paste("No data found for years:", paste(subset, collapse = ", ")))
+  }
+}
+
+
+```
+
+the output of all 4 lm tests for each pandemic test (with some context):
+## Pandemic 1: The 1957 Influenza Pandemic
+
+Call:
+lm(formula = Mortality_Rate ~ Year, data = subset_data)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.39395 -0.06842  0.03186  0.12278  0.21760 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 200.10891   34.48053   5.804 0.000258 ***
+Year         -0.09809    0.01762  -5.567 0.000349 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1848 on 9 degrees of freedom
+Multiple R-squared:  0.775,	Adjusted R-squared:   0.75 
+F-statistic:    31 on 1 and 9 DF,  p-value: 0.0003485
+### Interpretation:
+- We see a negative relationship where mortality rate decreased over time. 
+- Using a p-value of 0.001, we see the results are highly significant (p < 0.001) ,meaning the effect of the year on mortality rate is very strong.
+- High $$R^2= 0.775$$ means 77.5% of the variation in Mortality Rate is explained by Year.
+- F-statistic (31, p < 0.001) means this linear model provides a good explantation of the variability data.
+
+Conclusion:
+This period generallt shows a stronger decline in mortality rate, suggesting improvements in medical advancements, public health policies, or lifestyle changes.
+
+
+## Pandemic 2: The 1968 Influenza Pandemic
+
+Call:
+lm(formula = Mortality_Rate ~ Year, data = subset_data)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.66873  0.00483  0.03477  0.08792  0.27041 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)
+(Intercept) 72.10273   46.99085   1.534    0.159
+Year        -0.03288    0.02388  -1.377    0.202
+
+Residual standard error: 0.2504 on 9 degrees of freedom
+Multiple R-squared:  0.174,	Adjusted R-squared:  0.08222 
+F-statistic: 1.896 on 1 and 9 DF,  p-value: 0.2018
+
+### Interpretation:
+- Weaker negative relationship : Mortality rate slightly declined, but not significantly.
+- Not statistically significant due to a larger p- value of 0.202, suggesting that the year might not be a statistically significant indicator 
+- Low $$R^2= 0.174$$: only 17.4% of mortality rate variations are explained by Year.
+
+Conclusion:
+Unlike 1952–1962, the decline in mortality slowed down, possibly indicating a plateau in medical progress or shifts in population health trends.
+
+
+## Pandemic 3: The 2009 Swine Flu Pandemic
+
+Call:
+lm(formula = Mortality_Rate ~ Year, data = subset_data)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-1.95561  0.05987  0.16357  0.23941  0.50612 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)
+(Intercept)  61.28063  134.28325   0.456    0.659
+Year         -0.02703    0.06684  -0.404    0.695
+
+Residual standard error: 0.701 on 9 degrees of freedom
+Multiple R-squared:  0.01785,	Adjusted R-squared:  -0.09128 
+F-statistic: 0.1636 on 1 and 9 DF,  p-value: 0.6954
+
+### Interpretation:
+- No Significant Relationship (p = 0.695) : Year does not predict mortality rate in this period.
+- Very small $$R^2= 0.01785$$: Only 1.78% of variation is explained by Year.
+- Negative adjusted $$R^2= -0.091$$ indicates the model fits the data poorly.
+
+Conclusion:
+During 2004–2014, mortality rate trends were stable, meaning factors other than time (e.g., pandemics, lifestyle, healthcare policies) played a bigger role.
+
+## Pandemic 4: The COVID 19 Pandemic
+
+Call:
+lm(formula = Mortality_Rate ~ Year, data = subset_data)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.302106 -0.041033  0.007468  0.071832  0.221381 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -321.81718   52.77014  -6.098 0.000885 ***
+Year           0.16333    0.02614   6.248 0.000779 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1694 on 6 degrees of freedom
+Multiple R-squared:  0.8668,	Adjusted R-squared:  0.8446 
+F-statistic: 39.03 on 1 and 6 DF,  p-value: 0.0007793
+
+### Interpretation:
+- We see a positive relationship where mortality rate increased over time. 
+- Using a p-value of 0.001, we see the results are highly significant (p < 0.001) ,meaning the effect of the year on mortality rate is very strong.
+- High $$R^2= 0.8668$$ means 86.68% of the variation in Mortality Rate is explained by Year.
+- F-statistic (39, p < 0.001) means this linear model provides a good explantation of the variability data.
+
+Conclusion:
+The COVID-19 pandemic likely disrupted trends, causing unexpected spikes or fluctuations that weaken the predictive power of Year.
+
+```{r}
+library(dplyr)
+
+covid19test= read_excel("C:/Users/maria/Downloads/datacapstone/narrowPandemicDeath&mortality.xlsx")
+
+colnames(covid19test) = gsub(" ", "_", colnames(covid19test))
+
+covid19test$Year = as.numeric(covid19test$Year)
+covid19test$Mortality_Rate = as.numeric(covid19test$Mortality_Rate)
+
+# Define COVID-19 pandemic years
+covid_years=c(2020, 2021, 2022)
+
+# Filter dataset for COVID-19 period (2015-2022)
+covid_data = filter(covid19test, Year >= 2015 & Year <= 2022)
+
+#asked for help here!
+
+# Create a pandemic indicator column
+covid_data = covid_data %>%
+  mutate(Pandemic_Year = ifelse(Year %in% covid_years, 1, 0))
+
+# Perform multivariate regression with pandemic indicator
+model_covid = lm(Mortality_Rate ~ Year + Pandemic_Year, data = covid_data)
+summary(model_covid)
+
+# Perform regression with interaction term
+model_interaction = lm(Mortality_Rate ~ Year * Pandemic_Year, data = covid_data)
+summary(model_interaction)
+
+# Plot
+plot = ggplot(covid_data, aes(x = Year, y = Mortality_Rate, color = factor(Pandemic_Year))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggtitle("Mortality Rate During COVID-19 (2015-2022)") +
+  xlab("Year") +
+  ylab("Mortality Rate") +
+  theme_minimal() +
+  scale_color_manual(values = c("0" = "blue", "1" = "red"), name = "Pandemic Year")
+
+print(plot)
+
+```
+
+
+Call:
+lm(formula = Mortality_Rate ~ Year + Pandemic_Year, data = covid_data)
+
+Residuals:
+       1        2        3        4        5        6        7        8 
+ 0.05157 -0.04346  0.07013  0.07135 -0.14959 -0.06611 -0.15527  0.22138 
+
+Coefficients:
+                Estimate Std. Error t value Pr(>|t|)  
+(Intercept)   -203.53129   88.08140  -2.311   0.0688 .
+Year             0.10467    0.04367   2.397   0.0619 .
+Pandemic_Year    0.32851    0.20668   1.589   0.1728  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.1513 on 5 degrees of freedom
+Multiple R-squared:  0.9115,	Adjusted R-squared:  0.8761 
+F-statistic: 25.74 on 2 and 5 DF,  p-value: 0.002331
+
+
+
+Call:
+lm(formula = Mortality_Rate ~ Year * Pandemic_Year, data = covid_data)
+
+Residuals:
+        1         2         3         4         5         6         7         8 
+-0.005932 -0.072209  0.070128  0.100100 -0.092087  0.077635 -0.155269  0.077635 
+
+Coefficients:
+                     Estimate Std. Error t value Pr(>|t|)
+(Intercept)        -145.54396   81.20161  -1.792    0.148
+Year                  0.07592    0.04026   1.886    0.132
+Pandemic_Year      -348.17042  199.23125  -1.748    0.155
+Year:Pandemic_Year    0.17250    0.09861   1.749    0.155
+
+Residual standard error: 0.1273 on 4 degrees of freedom
+Multiple R-squared:  0.9498,	Adjusted R-squared:  0.9122 
+F-statistic: 25.25 on 3 and 4 DF,  p-value: 0.004636

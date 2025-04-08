@@ -1,0 +1,157 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+To test for the assumptions needed for us to use linear regression
+
+```{r}
+# Load necessary libraries
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(car)  # For regression diagnostics
+library(lmtest)  # For Durbin-Watson test (autocorrelation) and Breusch-Pagan test
+
+data=read_excel("C:/Users/maria/Downloads/datacapstone/narrowPandemicDeath&mortality.xlsx")
+
+# removing spaces from titles
+colnames(data)= gsub(" ", "_", colnames(data))
+
+data$Year = as.numeric(data$Year)
+data$Mortality_Rate= as.numeric(data$Mortality_Rate)
+
+year_subsets = list(
+  c(1952:1962),  # 1957 Pandemic + 5 years before/after
+  c(1963:1973),  # 1968 Pandemic + 5 years before/after
+  c(2004:2014),  # 2009 Pandemic + 5 years before/after
+  c(2015:2022)   # 2020-2022 Pandemic
+)
+
+#asked for help to not have to write the code a bunch of times
+
+# Loop through each subset and perform regression & diagnostics
+for (subset in year_subsets) {
+  subset_data = dplyr::filter(data, Year %in% subset)
+  
+  if (nrow(subset_data) > 0) {
+    model = lm(Mortality_Rate ~ Year, data = subset_data)
+    print(summary(model))
+    
+
+    plot = ggplot(subset_data, aes(x = Year, y = Mortality_Rate)) +
+      geom_point(color = "blue") +
+      geom_smooth(method = "lm", color = "red", se = FALSE) +
+      ggtitle(paste("Mortality Rate vs. Year (", min(subset), "-", max(subset), ")")) +
+      xlab("Year") +
+      ylab("Mortality Rate") +
+      theme_minimal()
+    
+    print(plot)
+    
+    # Regression Diagnostics
+    par(mfrow = c(2, 2))  # Arrange plots in 2x2 grid
+    
+    # Test for Normality: QQ Plot of Residuals
+    qqnorm(model$residuals, main = "QQ Plot of Residuals")
+    qqline(model$residuals, col = "red")
+    
+    # Test for Linearity: Residuals vs Fitted Values Plot
+    plot(model$fitted.values, model$residuals,
+         main = "Residuals vs Fitted Values",
+         xlab = "Fitted Values", ylab = "Residuals", pch = 19)
+    abline(h = 0, col = "red", lwd = 2)
+    
+    # Test for Constant Variance: Scale-Location Plot
+    plot(model$fitted.values, sqrt(abs(model$residuals)),
+         main = "Scale-Location Plot",
+         xlab = "Fitted Values", ylab = "sqrt(|Residuals|)", pch = 19)
+    abline(h = 0, col = "red", lwd = 2)
+    
+    # Test for Influential Points: Cook's Distance Plot
+    plot(model, which = 5)  # Cook's Distance plot
+    
+    # Test for Independence (Autocorrelation) using Durbin-Watson Test
+    dw_test <- dwtest(model)
+    print(dw_test)
+    
+    # Test for Homoscedasticity using Breusch-Pagan Test
+    bp_test <- bptest(model)
+    print(bp_test)
+    
+    par(mfrow = c(1, 1))  # Reset plot layout
+  }
+}
+
+```
+
+```{r}
+##MLR
+
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(car)  # For regression diagnostics
+
+data=read_excel("C:/Users/maria/Downloads/datacapstone/narrowPandemicDeath&mortality.xlsx")
+
+colnames(data) =gsub(" ", "_", colnames(data))
+
+data$Year = as.numeric(data$Year)
+data$Mortality_Rate <- as.numeric(data$Mortality_Rate)
+
+covid_years = c(2020, 2021, 2022)
+
+covid_data = dplyr::filter(data, Year >= 2015 & Year <= 2022)
+
+#asked for help here
+
+# Create a pandemic indicator column
+covid_data = covid_data %>%
+  mutate(Pandemic_Year = ifelse(Year %in% covid_years, 1, 0))
+
+# Perform multivariate regression with pandemic indicator
+model_covid = lm(Mortality_Rate ~ Year + Pandemic_Year, data = covid_data)
+summary(model_covid)
+
+# Perform regression with interaction term
+model_interaction = lm(Mortality_Rate ~ Year * Pandemic_Year, data = covid_data)
+summary(model_interaction)
+
+plot = ggplot(covid_data, aes(x = Year, y = Mortality_Rate, color = factor(Pandemic_Year))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggtitle("Mortality Rate During COVID-19 (2015-2022)") +
+  xlab("Year") +
+  ylab("Mortality Rate") +
+  theme_minimal() +
+  scale_color_manual(values = c("0" = "blue", "1" = "red"), name = "Pandemic Year")
+
+print(plot)
+
+# Regression Diagnostics
+par(mfrow = c(2, 2))  # Arrange plots in 2x2 grid
+
+# QQ Plot to check normality of residuals
+qqnorm(model_covid$residuals)
+qqline(model_covid$residuals, col = "red")
+
+# Residuals vs Fitted Values Plot
+plot(model_covid$fitted.values, model_covid$residuals,
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values", ylab = "Residuals", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# Check homoscedasticity (constant variance of residuals)
+plot(model_covid$fitted.values, sqrt(abs(model_covid$residuals)),
+     main = "Scale-Location Plot",
+     xlab = "Fitted Values", ylab = "sqrt(|Residuals|)", pch = 19)
+abline(h = 0, col = "red", lwd = 2)
+
+# Check linearity and influential points
+plot(model_covid, which = 5)  # Cook's Distance plot
+
+par(mfrow = c(1, 1))  # Reset plot layout
+```
+
