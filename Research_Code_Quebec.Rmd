@@ -1,0 +1,547 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+#Set seed
+```{r}
+set.seed(2025)
+```
+
+#Packages required for all models
+```{r}
+library("devtools") #For Bayesian
+library("ggplot2") # For All
+library("dplyr") #For All
+library("MASS") # For Negative Binomial regression - Karlinsky and Kobak's
+library("lmtest") #For 
+library("mosaic")
+library("car")
+library("vroom")
+library("tidyverse") #For Poisson regression
+library("readr") 
+library("data.table")
+library("lubridate")
+library("brms") #For Bayesian
+library("cmdstanr") #For Bayesian
+library("rstan") #For Bayesian
+```
+
+#Datasets used
+```{r}
+#Total Deaths Broken Down by Age and Gender
+research1.df = read.csv("C:\\Users\\Alyssa Dollente\\Downloads\\DATA 501 L01\\Research Project\\Dataset - Provinces\\Deaths_1x1_Quebec.csv")
+research1.df
+```
+
+
+#(1) H2N2 "Asian flu" - Influenza 1 (1957-58)
+```{r}
+#For the first 3 models
+influenza1.history = filter(research1.df, Year >= "1951" & Year <= "1956")
+#influenza1.history
+
+influenza1.timeline = filter(research1.df, Year >= "1957" & Year <= "1958")
+#influenza1.timeline
+```
+
+#Traning and Validation data 
+```{r}
+# Split into training (1952-1956) and validation (1957-1958) sets
+training_data <- influenza1.history
+validation_data <- influenza1.timeline
+```
+
+#(1-c) Bayesian Regression Model
+```{r}
+#Bayesian Regression Model
+
+# Fit Bayesian Poisson model with age group as a predictor
+bayesian_model <- brm(
+  as.integer(Total) ~ Year + Age, 
+  family = poisson(),
+  data = training_data,
+  prior = c(prior(normal(0, 5), class = "b")),
+  chains = 4, iter = 2000, warmup = 1000, cores = 4
+)
+
+# Predict expected deaths for validation set
+predictions <- posterior_predict(bayesian_model, newdata = validation_data)
+validation_data$expected_deaths <- apply(predictions, 2, mean)  # Mean of posterior samples
+
+# Compute excess mortality for each age group
+validation_data$excess_mortality <- validation_data$Total - validation_data$expected_deaths
+
+# Summarize total excess mortality across all age groups per year
+total_excess <- validation_data %>%
+  group_by(Year) %>%
+  summarize(excess_mortality = sum(excess_mortality), 
+            observed_deaths = sum(Total), 
+            expected_deaths = sum(expected_deaths), .groups = "drop")
+
+#Adding the excess mortality values into the validation data
+validation_data$excess_mortality_bayes_1957 <- validation_data$excess_mortality
+excess_mortality_bayes_1957 <- validation_data$excess_mortality_bayes_1957
+
+#Summary of excess deaths and the Bayesian Regression model
+total_excess 
+summary(bayesian_model)
+```
+
+
+```{r}
+# Calculate quantiles for each year (across all draws in 'predictions')
+lower_quantile <- apply(predictions, 2, function(x) quantile(x, probs = 0.025))  # Lower 2.5%
+upper_quantile <- apply(predictions, 2, function(x) quantile(x, probs = 0.975))   # Upper 97.5%
+
+# Map the quantiles to the 'total_excess' data based on 'year'
+total_excess$lower <- lower_quantile[match(total_excess$Year, colnames(predictions))]
+total_excess$upper <- upper_quantile[match(total_excess$Year, colnames(predictions))]
+
+#Plot results
+ggplot(total_excess, aes(x = Year)) +
+  geom_line(aes(y = observed_deaths, color = "Observed Deaths"), linewidth = 1) +
+  geom_line(aes(y = expected_deaths, color = "Expected Deaths"), linetype = "dashed", linewidth = 1) +
+  geom_ribbon(aes(ymin = lower,
+                  ymax = upper),
+              fill = "blue", alpha = 0.2) +
+  geom_col(aes(y = excess_mortality, fill = excess_mortality > 0), alpha = 0.5) +
+  scale_color_manual(values = c("Observed Deaths" = "red", "Expected Deaths" = "blue")) +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
+  scale_x_continuous(breaks = seq(min(total_excess$Year), max(total_excess$Year), by = 1)) +   
+       labs(title = "Excess Mortality Estimation (Bayesian Poisson Model with Age Adjustment)",
+       x = "Year", y = "Number of Deaths",
+       color = "Legend", fill = "Excess Mortality") +
+  theme_minimal()
+```
+
+#####Summary of excess mortality across all models
+```{r}
+# Summary of Excess Mortality across All Models
+
+# Combine excess mortality results into a single data frame
+excess_summary <- data.frame(
+  Year = validation_data$Year,
+  Bayesian = validation_data$excess_mortality_bayes_1957
+)
+
+# Summarize total excess mortality across years
+excess_summary_total <- excess_summary %>%
+  group_by(Year) %>%
+  summarize(Bayesian = sum(Bayesian, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(excess_summary_total)
+
+# Plot excess mortality comparisons
+ggplot(excess_summary_total, aes(x = Year)) +
+  geom_line(aes(y = Bayesian, color = "Bayesian"), linewidth = 1, linetype = "dashed") +
+  scale_color_manual(values = c("Quasi-Poisson" = "blue", "Negative Binomial" = "green", "Bayesian" = "red")) +
+  scale_x_continuous(breaks = seq(min(excess_summary_total$Year), max(excess_summary_total$Year), by = 1)) +
+  labs(title = "Comparison of Excess Mortality Estimates Across Models",
+       x = "Year", y = "Excess Mortality",
+       color = "Model") +
+  theme_minimal()
+```
+
+#(2) H3N2 "Hong Kong Flu" - Influenza 2 (1968-69)
+```{r}
+#For the first 3 models
+influenza2.history = filter(research1.df, Year >= "1962" & Year <= "1967")
+#influenza2.history
+
+influenza2.timeline = filter(research1.df, Year >= "1968" & Year <= "1969")
+influenza2.timeline
+```
+
+#Training and Validation data
+```{r}
+# Split into training (1962-1967) and validation (1968-1969) sets
+training_data <- influenza2.history
+validation_data <- influenza2.timeline
+```
+
+#(2-a) Quasi-Possion Regression Model
+```{r}
+#Quasi-Poisson regression model 
+
+# Fit Poisson regression model
+poisson_model <- glm(Total ~ Year + Age, family = quasipoisson, data = training_data)
+
+# Predict expected deaths for 2020-2022
+validation_data$expected_deaths <- predict(poisson_model, newdata = validation_data, type = "response")
+
+# Compute excess mortality
+validation_data$excess_mortality <- validation_data$Total - validation_data$expected_deaths
+
+# Summarize total excess mortality across all age groups per year
+total_excess <- validation_data %>%
+  group_by(Year) %>%
+  summarize(excess_mortality = sum(excess_mortality), 
+            observed_deaths = sum(Total), 
+            expected_deaths = sum(expected_deaths), .groups = "drop")
+
+total_excess
+```
+
+```{r}
+#Adding the excess mortality values into the validation data
+validation_data$excess_mortality_qp_1968 <- validation_data$excess_mortality
+excess_mortality_qp_1968 <- validation_data$excess_mortality_qp_1968
+
+#Summary of excess deaths and the Quasi-Poisson model
+total_excess
+summary(poisson_model)
+```
+
+```{r}
+# Plot results
+ggplot(total_excess, aes(x = Year)) +
+  geom_line(aes(y = observed_deaths, color = "Observed Deaths"), linewidth = 1) +
+  geom_line(aes(y = expected_deaths, color = "Expected Deaths"), linetype = "dashed", linewidth = 1) +
+  geom_col(aes(y = excess_mortality, fill = excess_mortality > 0), alpha = 0.5) +
+  scale_color_manual(values = c("Observed Deaths" = "red", "Expected Deaths" = "blue")) +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
+  scale_x_continuous(breaks = seq(min(total_excess$Year), max(total_excess$Year), by = 1)) + 
+  labs(title = "Excess Mortality Estimation (Poisson Regression with Age Adjustment)",
+       x = "Year", y = "Number of Deaths",
+       color = "Legend", fill = "Excess Mortality") +
+  theme_minimal()
+```
+
+#####Summary of excess mortality across all models
+```{r}
+# Summary of Excess Mortality across All Models
+
+# Combine excess mortality results into a single data frame
+excess_summary <- data.frame(
+  Year = validation_data$Year,
+  Quasi_Poisson = validation_data$excess_mortality_qp_1968
+)
+
+# Summarize total excess mortality across years
+excess_summary_total <- excess_summary %>%
+  group_by(Year) %>%
+  summarize(
+    Quasi_Poisson = sum(Quasi_Poisson, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(excess_summary_total)
+
+# Plot excess mortality comparisons
+ggplot(excess_summary_total, aes(x = Year)) +
+  geom_line(aes(y = Quasi_Poisson, color = "Quasi-Poisson"), linewidth = 1) +
+  scale_color_manual(values = c("Quasi-Poisson" = "blue", "Negative Binomial" = "green", "Bayesian" = "red")) +
+  scale_x_continuous(breaks = seq(min(excess_summary_total$Year), max(excess_summary_total$Year), by = 1)) +
+  labs(title = "Comparison of Excess Mortality Estimates Across Models",
+       x = "Year", y = "Excess Mortality",
+       color = "Model") +
+  theme_minimal()
+```
+
+#(3) H1N1 "Swine Flu" - Influenza 2 (2009-10)
+```{r}
+#For the first 3 models
+influenza3.history = filter(research1.df, Year >= "2003" & Year <= "2008")
+#influenza3.history
+
+influenza3.timeline = filter(research1.df, Year >= "2009" & Year <= "2010")
+#influenza3.timeline
+```
+
+#Traning and Validation data
+```{r}
+# Split into training (2003-2008) and validation (2009-2010) sets
+training_data <- influenza3.history
+validation_data <- influenza3.timeline
+```
+
+#(3-c) Bayesian Regression Model
+```{r}
+#Bayesian Regression Model
+
+# Fit Bayesian Poisson model with age group as a predictor
+bayesian_model <- brm(
+  as.integer(Total) ~ Year + Age, 
+  family = poisson(),
+  data = training_data,
+  prior = c(prior(normal(0, 5), class = "b")),
+  chains = 4, iter = 2000, warmup = 1000, cores = 4
+)
+
+# Predict expected deaths for validation set
+predictions <- posterior_predict(bayesian_model, newdata = validation_data)
+validation_data$expected_deaths <- apply(predictions, 2, mean)  # Mean of posterior samples
+
+# Compute excess mortality for each age group
+validation_data$excess_mortality <- validation_data$Total - validation_data$expected_deaths
+
+# Summarize total excess mortality across all age groups per year
+total_excess <- validation_data %>%
+  group_by(Year) %>%
+  summarize(excess_mortality = sum(excess_mortality), 
+            observed_deaths = sum(Total), 
+            expected_deaths = sum(expected_deaths), .groups = "drop")
+
+# Calculate quantiles for each year (across all draws in 'predictions')
+lower_quantile <- apply(predictions, 2, function(x) quantile(x, probs = 0.025))  # Lower 2.5%
+upper_quantile <- apply(predictions, 2, function(x) quantile(x, probs = 0.975))   # Upper 97.5%
+
+# Map the quantiles to the 'total_excess' data based on 'year'
+total_excess$lower <- lower_quantile[match(total_excess$Year, colnames(predictions))]
+total_excess$upper <- upper_quantile[match(total_excess$Year, colnames(predictions))]
+
+#Adding the excess mortality values into the validation data
+validation_data$excess_mortality_bayes_2009 <- validation_data$excess_mortality
+excess_mortality_bayes_2009 <- validation_data$excess_mortality_bayes_2009
+
+#Summary of excess deaths and the Bayesian Regression model
+total_excess
+summary(bayesian_model)
+```
+
+```{r}
+#Plot results
+ggplot(total_excess, aes(x = Year)) +
+  geom_line(aes(y = observed_deaths, color = "Observed Deaths"), linewidth = 1) +
+  geom_line(aes(y = expected_deaths, color = "Expected Deaths"), linetype = "dashed", linewidth = 1) +
+  geom_ribbon(aes(ymin = lower,
+                  ymax = upper),
+              fill = "blue", alpha = 0.2) +
+  geom_col(aes(y = excess_mortality, fill = excess_mortality > 0), alpha = 0.5) +
+  scale_color_manual(values = c("Observed Deaths" = "red", "Expected Deaths" = "blue")) +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
+  scale_x_continuous(breaks = seq(min(total_excess$Year), max(total_excess$Year), by = 1)) + 
+  labs(title = "Excess Mortality Estimation (Bayesian Poisson Model with Age Adjustment)",
+       x = "Year", y = "Number of Deaths",
+       color = "Legend", fill = "Excess Mortality") +
+  theme_minimal()
+```
+
+#####Summary of excess mortality across all models
+```{r}
+# Summary of Excess Mortality across All Models
+
+# Combine excess mortality results into a single data frame
+excess_summary <- data.frame(
+  Year = validation_data$Year,
+  Bayesian = validation_data$excess_mortality_bayes_2009
+)
+
+# Summarize total excess mortality across years
+excess_summary_total <- excess_summary %>%
+  group_by(Year) %>%
+  summarize(
+    Bayesian = sum(Bayesian, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(excess_summary_total)
+
+# Plot excess mortality comparisons
+ggplot(excess_summary_total, aes(x = Year)) +
+  geom_line(aes(y = Bayesian, color = "Bayesian"), linewidth = 1, linetype = "dashed") +
+  scale_color_manual(values = c("Quasi-Poisson" = "blue", "Negative Binomial" = "green", "Bayesian" = "red")) +
+  scale_x_continuous(breaks = seq(min(excess_summary_total$Year), max(excess_summary_total$Year), by = 1)) +
+  labs(title = "Comparison of Excess Mortality Estimates Across Models",
+       x = "Year", y = "Excess Mortality",
+       color = "Model") +
+  theme_minimal()
+```
+
+#(4) COVID-19 (2020-22)
+```{r}
+#For the first 3 models
+covid19.history = filter(research1.df, Year >= "2014" & Year <= "2019")
+#covid19.history
+
+covid19.timeline = filter(research1.df, Year >= "2020" & Year <= "2021") #change from the Canadian dataset since it only has mortality count up until 2021
+#covid19.timeline
+```
+
+#Training and Validation data
+```{r}
+# Split into training (2014-2019) and validation (2020-2021) sets
+training_data <- covid19.history
+validation_data <- covid19.timeline
+```
+
+#(4-b) Karlinsky and Kobak's Regression model
+```{r}
+#Karlinsky and Kobak's Regression Model
+
+# Ensure deaths are integers (needed for Poisson models)
+training_data$Total <- as.integer(round(training_data$Total))
+validation_data$Total <- as.integer(round(validation_data$Total))
+
+# Fit Karlinsky & Kobak's model (Quasi-Poisson or Negative Binomial)
+# If overdispersion is high, use Negative Binomial
+model_nb <- glm.nb(Total ~ Year + Age, data = training_data)
+
+# Predict expected deaths for validation set
+validation_data$expected_deaths <- predict(model_nb, newdata = validation_data, type = "response")
+
+# Compute excess mortality for each age group
+validation_data$excess_mortality <- validation_data$Total - validation_data$expected_deaths
+
+# Summarize total excess mortality across all age groups per year
+total_excess <- validation_data %>%
+  group_by(Year) %>%
+  summarize(excess_mortality = sum(excess_mortality), 
+            observed_deaths = sum(Total), 
+            expected_deaths = sum(expected_deaths), .groups = "drop")
+
+#Adding the excess mortality values into the validation data
+validation_data$excess_mortality_nb_covid <- validation_data$excess_mortality
+excess_mortality_nb_covid <- validation_data$excess_mortality_nb_covid
+
+
+#Summary of excess deaths and the Karlinsky and Kobak's model
+total_excess
+summary(model_nb)
+```
+
+```{r}
+# Plot results
+ggplot(total_excess, aes(x = Year)) +
+  geom_line(aes(y = observed_deaths, color = "Observed Deaths"), linewidth = 1) +
+  geom_line(aes(y = expected_deaths, color = "Expected Deaths"), linetype = "dashed", linewidth = 1) +
+  geom_col(aes(y = excess_mortality, fill = excess_mortality > 0), alpha = 0.5) +
+  scale_color_manual(values = c("Observed Deaths" = "red", "Expected Deaths" = "blue")) +
+  scale_fill_manual(values = c("TRUE" = "red", "FALSE" = "blue")) +
+  scale_x_continuous(breaks = seq(min(total_excess$Year), max(total_excess$Year), by = 1)) + 
+  labs(title = "COVID-19 Excess Mortality Estimation (2020-22)",
+       color = "Legend", fill = "Excess Mortality") + theme(plot.title = element_text(hjust = 0.5)) +
+  theme_minimal()
+```
+
+#####Summary of excess mortality across all models
+```{r}
+# Summary of Excess Mortality across All Models
+
+# Combine excess mortality results into a single data frame
+excess_summary <- data.frame(
+  Year = validation_data$Year,
+  Negative_Binomial = validation_data$excess_mortality_nb_covid
+)
+
+# Summarize total excess mortality across years
+excess_summary_total <- excess_summary %>%
+  group_by(Year) %>%
+  summarize(
+    Negative_Binomial = sum(Negative_Binomial, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+print(excess_summary_total)
+
+# Plot excess mortality comparisons
+ggplot(excess_summary_total, aes(x = Year)) +
+  geom_line(aes(y = Negative_Binomial, color = "Negative Binomial"), linewidth = 1) +
+  scale_color_manual(values = c("Quasi-Poisson" = "blue", "Negative Binomial" = "green", "Bayesian" = "red")) +
+  scale_x_continuous(breaks = seq(min(excess_summary_total$Year), max(excess_summary_total$Year), by = 1)) +
+  labs(title = "Comparison of Excess Mortality Estimates Across Models",
+       x = "Year", y = "Excess Mortality",
+       color = "Model") +
+  theme_minimal()
+```
+#######Summary of excess mortality across all pandemics - all in one sheet
+```{r}
+#Aggregate all the pandemic names
+pandemic_names <- c(
+  rep("H2N2 Asian Flu", length(influenza1.timeline$Year)),
+  rep("H3N2 Hong Kong Flu", length(influenza2.timeline$Year)),
+  rep("H1N1 Swine Flu", length(influenza3.timeline$Year)),
+  rep("COVID-19", length(covid19.timeline$Year))
+)
+
+#Combine all of the timeline into one list
+pandemic_timeline <- c(influenza1.timeline$Year,influenza2.timeline$Year,influenza3.timeline$Year,covid19.timeline$Year)
+
+#Combine all of the excess mortality into one list
+excess_mortality_united <- c(excess_mortality_bayes_1957,excess_mortality_qp_1968,excess_mortality_bayes_2009,excess_mortality_nb_covid)
+
+# Combine all excess mortality into one
+excess_mortality_comparison <- data.frame(
+  Year = pandemic_timeline,
+  Age = validation_data$Age,
+  Excess_Mortality = excess_mortality_united,
+  Pandemic = pandemic_names 
+)
+
+# Print results
+excess_mortality_comparison
+
+# Save as a CSV file
+write.csv(excess_mortality_comparison, "Pandemic_Excess_Mortality_Quebec_i.csv", row.names = FALSE)
+```
+
+```{r}
+library("openxlsx") #to create an excel file for excess mortality results
+```
+
+
+######Summary of excess mortality across all pandemics
+```{r}
+# Create a new workbook to store the results
+wb <- createWorkbook()
+
+# List of pandemics and the corresponding years and excess mortality variables
+pandemic_data <- list(
+  H2N2_Asian_Flu = list(years = c(1957, 1958), 
+                        bayes = excess_mortality_bayes_1957, 
+                        timeline = influenza1.timeline),
+  
+  H3N2_Hong_Kong_Flu = list(years = c(1968, 1969), 
+                            qp = excess_mortality_qp_1968, 
+                            timeline = influenza2.timeline),
+  
+  H1N1_Swine_Flu = list(years = c(2009, 2010), 
+                        bayes = excess_mortality_bayes_2009, 
+                        timeline = influenza3.timeline),
+  
+  COVID19 = list(years = c(2020, 2021), 
+                 nb = excess_mortality_nb_covid, 
+                 timeline = covid19.timeline)
+)
+
+pandemic_data
+```
+
+
+```{r}
+# Loop through each pandemic
+for (pandemic in names(pandemic_data)) {
+  
+  # Get the relevant excess mortality data and timeline for this pandemic
+  pandemic_info <- pandemic_data[[pandemic]]
+  years <- pandemic_info$years
+  timeline <- pandemic_info$timeline
+  
+  # Determine the number of rows based on the length of the excess mortality data
+  num_rows <- length(pandemic_info$qp)
+  
+  # Create an empty data frame to store results for this pandemic while attaching
+  #original Year and Age from the validation dataset (timeline)
+  pandemic_results <- data.frame(Year = timeline$Year, 
+                                 Age = timeline$Age)
+  
+  # Add the excess mortality values for each model
+  pandemic_results$Quasi_Poisson <- pandemic_info$qp
+  pandemic_results$Negative_Binomial <- pandemic_info$nb
+  pandemic_results$Bayesian <- pandemic_info$bayes
+  
+  # Create a simple sheet name (limit to the first 31 characters to avoid exceeding Excel's limit)
+  sheet_name <- substr(pandemic, 1, 31)
+  
+  # Add this pandemic's data to a new sheet in the workbook
+  addWorksheet(wb, sheet_name)
+  writeData(wb, sheet_name, pandemic_results)
+}
+
+# Save the workbook as an Excel file
+saveWorkbook(wb, "Pandemic_Excess_Mortality_Quebec.xlsx", overwrite = TRUE)
+
+cat("Excess mortality results saved as an Excel file with multiple sheets for each pandemic.\n")
+```
