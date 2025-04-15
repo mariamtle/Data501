@@ -35,53 +35,52 @@ year_subsets = list(
 for (subset in year_subsets) {
   subset_data = dplyr::filter(data, Year %in% subset)
   
-  if (nrow(subset_data) > 0) {
-    model = lm(Mortality_Rate ~ Year, data = subset_data)
-    print(summary(model))
-    
+  model = lm(Mortality_Rate ~ Year, data = subset_data)
+  print(summary(model))
+  
 
-    plot = ggplot(subset_data, aes(x = Year, y = Mortality_Rate)) +
-      geom_point(color = "blue") +
-      geom_smooth(method = "lm", color = "red", se = FALSE) +
-      ggtitle(paste("Mortality Rate vs. Year (", min(subset), "-", max(subset), ")")) +
-      xlab("Year") +
-      ylab("Mortality Rate") +
-      theme_minimal()
-    
-    print(plot)
-    
-    # Regression Diagnostics
-    par(mfrow = c(2, 2))  # Arrange plots in 2x2 grid
-    
-    # Test for Normality: QQ Plot of Residuals
-    qqnorm(model$residuals, main = "QQ Plot of Residuals")
-    qqline(model$residuals, col = "red")
-    
-    # Test for Linearity: Residuals vs Fitted Values Plot
-    plot(model$fitted.values, model$residuals,
-         main = "Residuals vs Fitted Values",
-         xlab = "Fitted Values", ylab = "Residuals", pch = 19)
-    abline(h = 0, col = "red", lwd = 2)
-    
-    # Test for Constant Variance: Scale-Location Plot
-    plot(model$fitted.values, sqrt(abs(model$residuals)),
-         main = "Scale-Location Plot",
-         xlab = "Fitted Values", ylab = "sqrt(|Residuals|)", pch = 19)
-    abline(h = 0, col = "red", lwd = 2)
-    
-    # Test for Influential Points: Cook's Distance Plot
-    plot(model, which = 5)  # Cook's Distance plot
-    
-    # Test for Independence (Autocorrelation) using Durbin-Watson Test
-    dw_test <- dwtest(model)
-    print(dw_test)
-    
-    # Test for Homoscedasticity using Breusch-Pagan Test
-    bp_test <- bptest(model)
-    print(bp_test)
-    
-    par(mfrow = c(1, 1))  # Reset plot layout
-  }
+  plot = ggplot(subset_data, aes(x = Year, y = Mortality_Rate)) +
+    geom_point(color = "blue") +
+    geom_smooth(method = "lm", color = "red", se = FALSE) +
+    ggtitle(paste("Mortality Rate vs. Year (", min(subset), "-", max(subset), ")")) +
+    xlab("Year") +
+    ylab("Mortality Rate") +
+    theme_minimal()
+  
+  print(plot)
+  
+  # Regression Diagnostics
+  par(mfrow = c(2, 2))  # Arrange plots in 2x2 grid
+  
+  # Test for Normality: QQ Plot of Residuals
+  qqnorm(model$residuals, main = "QQ Plot of Residuals")
+  qqline(model$residuals, col = "red")
+  
+  # Test for Linearity: Residuals vs Fitted Values Plot
+  plot(model$fitted.values, model$residuals,
+       main = "Residuals vs Fitted Values",
+       xlab = "Fitted Values", ylab = "Residuals", pch = 19)
+  abline(h = 0, col = "red", lwd = 2)
+  
+  # Test for Constant Variance: Scale-Location Plot
+  plot(model$fitted.values, sqrt(abs(model$residuals)),
+       main = "Scale-Location Plot",
+       xlab = "Fitted Values", ylab = "sqrt(|Residuals|)", pch = 19)
+  abline(h = 0, col = "red", lwd = 2)
+  
+  # Test for Influential Points: Cook's Distance Plot
+  plot(model, which = 5)  # Cook's Distance plot
+  
+  # Test for Independence (Autocorrelation) using Durbin-Watson Test
+  dw_test <- dwtest(model)
+  print(dw_test)
+  
+  # Test for Homoscedasticity using Breusch-Pagan Test
+  bp_test <- bptest(model)
+  print(bp_test)
+  
+  par(mfrow = c(1, 1))  # Reset plot layout
+
 }
 
 ```

@@ -1,0 +1,497 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Option 1: ARIMA Testing?
+loading needed libraries (use install.packages() first if "library not found" error comes up)
+
+```{r}
+library(tidyverse)
+library(forecast)
+library(tseries)
+library(readxl)
+```
+
+Testing for COvid-19 mortality using past pandemics:
+```{r}
+test2data= read_excel("C:/Users/maria/Downloads/datacapstone/ByYearDeathPopMortal.xlsx")
+colnames(test2data) = gsub(" ", ".", colnames(test2data))
+
+# Convert Year to time series format
+test2ts_data = ts(test2data$Mortality.Rate, start = min(test2data$Year), frequency = 1)
+
+# Define training and testing sets
+t2train = window(test2ts_data,start=1950, end = 2019)  # Train up to the last pandemic year - 1
+t2test = window(test2ts_data, start = 2020)  # Test on the last pandemic period
+
+# Check stationarity
+adf_test = adf.test(t2train)
+print(adf_test)
+
+# Differencing needed since p-value > 0.05
+diff_data = diff(t2train, differences = 1)
+adf_test_diff = adf.test(diff_data)
+print(adf_test_diff)
+
+# Using auto.arima to find the best p,d,q terms for the best-fitting model
+optimal_arima_model = auto.arima(t2train, stepwise = FALSE, approximation = FALSE, seasonal= TRUE)
+summary(optimal_arima_model)
+
+# <Making sure the residuals are random
+checkresiduals(optimal_arima_model)
+
+# Forecasting future mortality trends
+future_forecast = forecast(optimal_arima_model, h = 10)  # Forecast the entire last pandemic period by using length(t2test), or change it to a different value for longer/shorter predictions
+plot(future_forecast, main = "Optimized ARIMA Forecast 
+     for Future Mortality Trends",xlab= "Year", ylab="Mortality Rate (per 1000 people)")
+
+# Print forecast values
+print(future_forecast)
+
+```
+```{r}
+# Define training and testing sets
+t2train = window(test2ts_data,start=1950, end = 2008)  # Train up to the last pandemic year - 1
+t2test = window(test2ts_data, start = 2009)  # Test on the last pandemic period
+
+# Check stationarity
+adf_test = adf.test(t2train)
+print(adf_test)
+
+# Differencing needed since p-value > 0.05
+diff_data = diff(t2train, differences = 1)
+adf_test_diff = adf.test(diff_data)
+print(adf_test_diff)
+
+# Using auto.arima to find the best p,d,q terms for the best-fitting model
+optimal_arima_model = auto.arima(t2train, stepwise = FALSE, approximation = FALSE, seasonal= TRUE)
+summary(optimal_arima_model)
+
+# <Making sure the residuals are random
+checkresiduals(optimal_arima_model)
+
+# Forecasting future mortality trends
+future_forecast = forecast(optimal_arima_model, h = 11)  # Forecast the entire last pandemic period by using length(t2test), or change it to a different value for longer/shorter predictions
+plot(future_forecast, main = "Optimized ARIMA Forecast 
+     for Future Mortality Trends",xlab= "Year", ylab="Mortality Rate (per 1000 people)")
+
+# Print forecast values
+print(future_forecast)
+
+```
+```{r}
+test2data= read_excel("C:/Users/maria/Downloads/datacapstone/ByYearDeathPopMortal.xlsx")
+colnames(test2data) = gsub(" ", ".", colnames(test2data))
+
+# Convert Year to time series format
+test2ts_data = ts(test2data$Mortality.Rate, start = min(test2data$Year), frequency = 1)
+
+# Define training and testing sets
+t2train = window(test2ts_data,start=1950, end = 2019)  # Train up to the last pandemic year - 1
+t2test = window(test2ts_data, start = 2020)  # Test on the last pandemic period
+
+# Check stationarity
+adf_test = adf.test(t2train)
+print(adf_test)
+
+# Differencing needed since p-value > 0.05
+diff_data = diff(t2train, differences = 1)
+adf_test_diff = adf.test(diff_data)
+print(adf_test_diff)
+
+# Using auto.arima to find the best p,d,q terms for the best-fitting model
+optimal_arima_model = auto.arima(t2train, stepwise = FALSE, approximation = FALSE, seasonal= TRUE)
+summary(optimal_arima_model)
+
+# <Making sure the residuals are random
+checkresiduals(optimal_arima_model)
+
+# Forecasting future mortality trends
+future_forecast = forecast(optimal_arima_model, h = 10)  # Forecast the entire last pandemic period by using length(t2test), or change it to a different value for longer/shorter predictions
+plot(future_forecast, main = "Optimized ARIMA Forecast 
+     for Future Mortality Trends",xlab= "Year", ylab="Mortality Rate (per 1000 people)")
+
+# Print forecast values
+print(future_forecast)
+
+```
+
+```{r}
+test2data= read_excel("C:/Users/maria/Downloads/datacapstone/ByYearDeathPopMortal.xlsx")
+colnames(test2data) = gsub(" ", ".", colnames(test2data))
+
+# Convert Year to time series format
+test2ts_data = ts(test2data$Mortality.Rate, start = min(test2data$Year), frequency = 1)
+
+# Define training and testing sets
+t2train = window(test2ts_data,start=1950, end = 1967)  # Train up to the last pandemic year - 1
+t2test = window(test2ts_data, start = 1968)  # Test on the last pandemic period
+
+# Check stationarity
+adf_test = adf.test(t2train)
+print(adf_test)
+
+# Differencing needed since p-value > 0.05
+diff_data = diff(t2train, differences = 1)
+adf_test_diff = adf.test(diff_data)
+print(adf_test_diff)
+
+# Using auto.arima to find the best p,d,q terms for the best-fitting model
+optimal_arima_model = auto.arima(t2train, stepwise = FALSE, approximation = FALSE, seasonal= TRUE)
+summary(optimal_arima_model)
+
+# <Making sure the residuals are random
+checkresiduals(optimal_arima_model)
+
+# Forecasting future mortality trends
+future_forecast = forecast(optimal_arima_model, h = 11)  # Forecast the entire last pandemic period by using length(t2test), or change it to a different value for longer/shorter predictions
+plot(future_forecast, main = "Optimized ARIMA Forecast 
+     for Future Mortality Trends",xlab= "Year", ylab="Mortality Rate (per 1000 people)")
+
+# Print forecast values
+print(future_forecast)
+```
+```{r}
+test2data= read_excel("C:/Users/maria/Downloads/datacapstone/ByYearDeathPopMortal.xlsx")
+colnames(test2data) = gsub(" ", ".", colnames(test2data))
+
+# Convert Year to time series format
+test2ts_data = ts(test2data$Mortality.Rate, start = min(test2data$Year), frequency = 1)
+
+# Define training and testing sets
+t2train = window(test2ts_data,start=1950, end = 1956)  # Train up to the last pandemic year - 1
+t2test = window(test2ts_data, start = 1957)  # Test on the last pandemic period
+
+# Check stationarity
+adf_test = adf.test(t2train)
+print(adf_test)
+
+# Differencing needed since p-value > 0.05
+diff_data = diff(t2train, differences = 1)
+adf_test_diff = adf.test(diff_data)
+print(adf_test_diff)
+
+# Using auto.arima to find the best p,d,q terms for the best-fitting model
+optimal_arima_model = auto.arima(t2train, stepwise = FALSE, approximation = FALSE, seasonal= TRUE)
+summary(optimal_arima_model)
+
+# <Making sure the residuals are random
+checkresiduals(optimal_arima_model)
+
+# Forecasting future mortality trends
+future_forecast = forecast(optimal_arima_model, h = 11)  # Forecast the entire last pandemic period by using length(t2test), or change it to a different value for longer/shorter predictions
+plot(future_forecast, main = "Optimized ARIMA Forecast 
+     for Future Mortality Trends",xlab= "Year", ylab="Mortality Rate (per 1000 people)")
+
+# Print forecast values
+print(future_forecast)
+```
+```{r}
+library(forecast)
+library(tseries)
+library(dplyr)
+
+# Function to predict mortality with ARIMA for a given pandemic year
+predict_pandemic_arima = function(pandemic_year, years_before = 5, df_input = test2data) {
+  df_input = df_input %>% arrange(Year)
+  
+  # Ensure column names are standardized
+  colnames(df_input) = gsub(" ", ".", colnames(df_input))
+  
+  # Training window
+  train_years = (pandemic_year - years_before):(pandemic_year - 1)
+  train_data = df_input %>% filter(Year %in% train_years)
+  test_data = df_input %>% filter(Year == pandemic_year)
+  
+  if (nrow(train_data) < 2 | nrow(test_data) == 0) {
+    warning(paste("Insufficient data for year:", pandemic_year))
+    return(NULL)
+  }
+  
+  # Convert to time series
+  train_ts = ts(train_data$Mortality.Rate, start = min(train_data$Year), frequency = 1)
+  
+  # Fit ARIMA model
+  arima_model = auto.arima(train_ts, seasonal = FALSE)
+  
+  # Forecast 1 year ahead
+  forecast_result = forecast(arima_model, h = 1)
+  pred = as.numeric(forecast_result$mean[1])
+  actual = test_data$Mortality.Rate
+  
+  # Metrics
+  mae = abs(actual - pred)
+  rmse = sqrt((actual - pred)^2)
+  mape = abs((actual - pred) / actual) * 100
+  
+  return(data.frame(
+    Year = pandemic_year,
+    Predicted = pred,
+    Actual = actual,
+    MAE = mae,
+    RMSE = rmse,
+    MAPE = mape
+  ))
+}
+
+pandemic_years = c(1957, 1968, 2009, 2020)
+
+arima_results = do.call(rbind, lapply(pandemic_years, function(y) {
+  predict_pandemic_arima(y, years_before = ifelse(y == 2020, 10, 5), df_input = test2data)
+}))
+
+print(arima_results)
+```
+```{r}
+ggplot(arima_results, aes(x = Year)) +
+  geom_line(aes(y = Actual, color = "Actual"), size = 1.2) +
+  geom_line(aes(y = Predicted, color = "Predicted"), size = 1.2, linetype = "dashed") +
+  geom_point(aes(y = Actual, color = "Actual"), size = 3) +
+  geom_point(aes(y = Predicted, color = "Predicted"), size = 3) +
+  labs(title = "ARIMA Prediction of Pandemic Mortality",
+       y = "Mortality Rate (per 1,000 people)", x = "Pandemic Year") +
+  scale_color_manual(values = c("Actual" = "darkblue", "Predicted" = "darkgreen")) +
+  theme_minimal()
+```
+
+Option B: EGBoost!
+```{r}
+library(tidyverse)
+library(forecast)
+library(tseries)
+library(readxl)
+library(xgboost)
+library(dplyr)
+```
+
+```{r}
+test2data = read_excel("C:/Users/maria/Downloads/datacapstone/narrowPandemicDeath&mortality.xlsx")
+```
+
+H2N2 Asian Flu:
+```{r}
+# Select training data (5 years before 1957)
+train_h2n2 = test2data %>% filter(Year %in% 1952:1956)
+test_h2n2 = test2data %>% filter(Year == 1957)
+
+# Use population features to predict mortality rate
+features = c("Female Population", "Male Population", "Total Population", "Female Deaths", "Male Deaths", "Total Deaths")
+X_train = as.matrix(train_h3n2[, features])
+y_train = train_h2n2$`Mortality Rate`
+
+X_test = as.matrix(test_h2n2[, features])
+
+# Train XGBoost model
+dtrain = xgb.DMatrix(data = X_train, label = y_train)
+bst = xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror", verbose = 0)
+
+# Predict
+pred = predict(bst, newdata = X_test)
+cat("Predicted Mortality Rate for 1957:", pred, "\n")
+cat("Actual Mortality Rate for 1957:", test_h2n2$`Mortality Rate`, "\n")
+```
+
+
+H3N2 Hong Kong Flu:
+```{r}
+# Select training data (5 years before 1968)
+train_h3n2 = test2data %>% filter(Year %in% 1963:1967)
+test_h3n2 = test2data %>% filter(Year == 1968)
+
+# Use population features to predict mortality rate
+features = c("Female Population", "Male Population", "Total Population", "Female Deaths", "Male Deaths", "Total Deaths")
+X_train = as.matrix(train_h3n2[, features])
+y_train = train_h3n2$`Mortality Rate`
+
+X_test = as.matrix(test_h3n2[, features])
+
+# Train XGBoost model
+dtrain = xgb.DMatrix(data = X_train, label = y_train)
+bst = xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror", verbose = 0)
+
+# Predict
+pred = predict(bst, newdata = X_test)
+cat("Predicted Mortality Rate for 1968:", pred, "\n")
+cat("Actual Mortality Rate for 1968:", test_h3n2$`Mortality Rate`, "\n")
+```
+H1N1 Swine Flu:
+```{r}
+# Select training data (5 years before 2009)
+train_h1n1 = test2data %>% filter(Year %in% 2004:2008)
+test_h1n1 = test2data %>% filter(Year == 2009)
+
+# Use population features to predict mortality rate
+features = c("Female Population", "Male Population", "Total Population", "Female Deaths", "Male Deaths", "Total Deaths")
+X_train = as.matrix(train_h1n1[, features])
+y_train = train_h1n1$`Mortality Rate`
+
+X_test = as.matrix(test_h1n1[, features])
+
+# Train XGBoost model
+dtrain = xgb.DMatrix(data = X_train, label = y_train)
+bst = xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror", verbose = 0)
+
+# Predict
+pred = predict(bst, newdata = X_test)
+cat("Predicted Mortality Rate for 2009:", pred, "\n")
+cat("Actual Mortality Rate for 2009:", test_h1n1$`Mortality Rate`, "\n")
+```
+COVID-19:
+```{r}
+# Select training data (5 years before 2020)
+train_c19 = test2data %>% filter(Year %in% 2015:2019)
+test_c19 = test2data %>% filter(Year == 2020)
+
+# Use population features to predict mortality rate
+features = c("Female Population", "Male Population", "Total Population", "Female Deaths", "Male Deaths", "Total Deaths")
+X_train = as.matrix(train_c19[, features])
+y_train = train_c19$`Mortality Rate`
+
+X_test = as.matrix(test_c19[, features])
+
+# Train XGBoost model
+dtrain = xgb.DMatrix(data = X_train, label = y_train)
+bst = xgboost(data = dtrain, nrounds = 100, objective = "reg:squarederror", verbose = 0)
+
+# Predict
+pred = predict(bst, newdata = X_test)
+cat("Predicted Mortality Rate for 2020:", pred, "\n")
+cat("Actual Mortality Rate for 2020:", test_c19$`Mortality Rate`, "\n")
+```
+evaluation metrics?
+```{r}
+predict_pandemic_mortality = function(pandemic_year, years_before = 5, df_input = df_lag) {
+  train_years = (pandemic_year - years_before):(pandemic_year - 1)
+  test_year = pandemic_year
+
+  train_data = df_input %>% filter(Year %in% train_years)
+  test_data = df_input %>% filter(Year == test_year)
+
+  if (nrow(test_data) == 0) {
+    warning(paste("No data available for pandemic year:", test_year))
+    return(NULL)
+  }
+
+  X_train = as.matrix(train_data[, features])
+  y_train = train_data$`Mortality Rate`
+  X_test = as.matrix(test_data[, features])
+  y_test = test_data$`Mortality Rate`
+
+  dtrain = xgb.DMatrix(data = X_train, label = y_train)
+
+  model = xgboost(data = dtrain,
+                   nrounds = 100,
+                   max_depth = 3,
+                   eta = 0.1,
+                   objective = "reg:squarederror",
+                   verbose = 0)
+
+  pred = predict(model, newdata = X_test)
+
+  # Compute metrics
+  mae = mean(abs(y_test - pred))
+  rmse = sqrt(mean((y_test - pred)^2))
+  mape = mean(abs((y_test - pred) / y_test)) * 100
+
+  return(data.frame(
+    Year = test_year,
+    Pandemic = paste("Pandemic", test_year),
+    Predicted = pred,
+    Actual = y_test,
+    MAE = mae,
+    RMSE = rmse,
+    MAPE = mape
+  ))
+}
+
+pandemic_years=c(1957, 1968, 2009, 2020)
+results_all = do.call(rbind, lapply(pandemic_years, predict_pandemic_mortality))
+
+print(results_all)
+
+```
+
+Lastly: XGBoost plot
+```{r}
+# Load Libraries
+library(xgboost)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+
+# Load and preprocess data
+test2data = read_excel("C:/Users/maria/Downloads/datacapstone/narrowPandemicDeath&mortality.xlsx")
+
+# Add lag features and change metrics
+df_lag = test2data %>%
+  arrange(Year) %>%
+  mutate(
+    Lag_Mortality = lag(`Mortality Rate`, 1),
+    Lag_Deaths = lag(`Total Deaths`, 1),
+    Change_Deaths = `Total Deaths` - Lag_Deaths,
+    Change_Mortality = `Mortality Rate` - Lag_Mortality,
+    PandemicFlag = ifelse(Year %in% c(1957, 1968, 2009, 2020), 1, 0),
+    PrePandemicFlag = ifelse(Year %in% c(1956, 1967, 2008, 2019), 1, 0)
+  ) %>%
+  filter(!is.na(Lag_Mortality))
+
+# Define features
+features = c("Female Population", "Male Population", "Total Population",
+              "Female Deaths", "Male Deaths", "Total Deaths",
+              "Lag_Mortality", "Lag_Deaths",
+              "Change_Deaths", "Change_Mortality",
+              "PandemicFlag", "PrePandemicFlag")
+
+# Reusable XGBoost prediction function
+predict_pandemic_mortality = function(pandemic_year, years_before = 5, df_input = df_lag) {
+  train_years = (pandemic_year - years_before):(pandemic_year - 1)
+  test_year = pandemic_year
+
+  train_data = df_input %>% filter(Year %in% train_years)
+  test_data = df_input %>% filter(Year == test_year)
+
+  if (nrow(test_data) == 0) {
+    warning(paste("No data available for pandemic year:", test_year))
+    return(NULL)
+  }
+
+  X_train = as.matrix(train_data[, features])
+  y_train = train_data$`Mortality Rate`
+  X_test = as.matrix(test_data[, features])
+  dtrain = xgb.DMatrix(data = X_train, label = y_train)
+
+  model = xgboost(data = dtrain,
+                   nrounds = 100,
+                   max_depth = 3,
+                   eta = 0.1,
+                   objective = "reg:squarederror",
+                   verbose = 0)
+
+  pred = predict(model, newdata = X_test)
+
+  return(data.frame(Year = test_year,
+                    Pandemic = paste("Pandemic", test_year),
+                    Predicted = pred,
+                    Actual = test_data$`Mortality Rate`))
+}
+
+# Run predictions for all four pandemics
+pandemic_years = c(1957, 1968, 2009, 2020)
+results_all = do.call(rbind, lapply(pandemic_years, predict_pandemic_mortality))
+
+print(results_all)
+
+# Plot predicted vs actual
+ggplot(results_all, aes(x = Year)) +
+  geom_line(aes(y = Actual, color = "Actual"), size = 1.2) +
+  geom_line(aes(y = Predicted, color = "Predicted"), size = 1.2, linetype = "dashed") +
+  geom_point(aes(y = Actual, color = "Actual"), size = 3) +
+  geom_point(aes(y = Predicted, color = "Predicted"), size = 3) +
+  labs(title = "XGBoost Prediction of Pandemic Mortality",
+       y = "Mortality Rate (per 1000 people)", x = "Pandemic Year") +
+  scale_color_manual(values = c("Actual" = "darkblue", "Predicted" = "darkgreen")) +
+  theme_minimal()
+
+```
+
